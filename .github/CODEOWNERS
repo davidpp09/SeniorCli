@@ -1,0 +1,45 @@
+# Quien revisa que. GitHub pide review automaticamente a estas personas.
+#
+# ===========================================================================
+# ESTAS REGLAS ESTAN DESACTIVADAS (comentadas) A PROPOSITO.
+#
+# Un CODEOWNERS que nombra usuarios inexistentes o sin acceso de escritura al
+# repo no funciona: GitHub marca el archivo con error y, si ademas activaste
+# "Require review from Code Owners", los PR se quedan sin poder mergearse.
+#
+# Para activarlo:
+#   1. Invita a las 6 personas al repo con permiso Write
+#      (Settings > Collaborators, o Members si es una organizacion).
+#   2. Descomenta las lineas de abajo.
+#   3. Cambia @FRENTE-1 / @FRENTE-2 / @FRENTE-3 / @COORDINACION por los
+#      usuarios reales de GitHub, con @ adelante: @pepito, @maria-dev.
+#      Pueden ser varios por linea, separados por espacio.
+#      En una organizacion tambien sirve un equipo: @mi-org/frente-1
+#   4. Commitea. GitHub valida el archivo solo; si algo esta mal, aparece un
+#      aviso al abrirlo en la web.
+# ===========================================================================
+
+# Todo lo demas: coordinacion.
+# *                        @COORDINACION
+
+# --- Contratos compartidos ---------------------------------------------------
+# Tocar esto rompe a los otros dos frentes: lo revisan los tres responsables.
+# /src/contracts/          @FRENTE-1 @FRENTE-2 @FRENTE-3
+# /tests/vertical_slice.rs @FRENTE-1 @FRENTE-2 @FRENTE-3
+
+# --- Frente 1: Runtime & Context ---------------------------------------------
+# /src/runtime/            @FRENTE-1
+# /docs/frentes/frente-1-runtime.md @FRENTE-1
+
+# --- Frente 2: AI & Learning Harness -----------------------------------------
+# /src/learning/           @FRENTE-2
+# /docs/frentes/frente-2-learning.md @FRENTE-2
+
+# --- Frente 3: CLI, Producto & Persistencia ----------------------------------
+# /src/app/                @FRENTE-3
+# /src/main.rs             @FRENTE-3
+# /docs/frentes/frente-3-cli.md @FRENTE-3
+
+# --- Infraestructura ---------------------------------------------------------
+# /.github/                @COORDINACION
+# /Cargo.toml              @COORDINACION

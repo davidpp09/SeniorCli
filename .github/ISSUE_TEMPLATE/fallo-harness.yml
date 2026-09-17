@@ -1,0 +1,55 @@
+name: Fallo del harness
+description: El modelo alucino, se paso de ayuda, rompio el JSON o se perdio el estado.
+title: "[harness] "
+labels: ["harness"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        La guia pide registrar estos fallos **desde el inicio**. Son la materia
+        prima para saber si el harness funciona, no una molestia.
+
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo de fallo
+      options:
+        - Alucinacion tecnica (invento una API, sintaxis o causa)
+        - Sobre-ayuda (entrego la solucion cuando no debia)
+        - Peticion vaga mal manejada (adivino en vez de preguntar)
+        - JSON invalido o respuesta ilegible
+        - Perdida de contexto u objetivo pedagogico
+        - Perdida o corrupcion de estado local
+        - Prompt injection desde el contenido del repo
+        - Loop de herramientas
+    validations:
+      required: true
+
+  - type: textarea
+    id: entrada
+    attributes:
+      label: Que se le pidio
+      description: Mensaje del alumno y, si puedes, el contexto que se envio.
+    validations:
+      required: true
+
+  - type: textarea
+    id: salida
+    attributes:
+      label: Que respondio
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Que deberia haber respondido
+    validations:
+      required: true
+
+  - type: input
+    id: proveedor
+    attributes:
+      label: Proveedor
+      placeholder: mock / deepseek

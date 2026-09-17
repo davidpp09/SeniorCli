@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Binario (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            nombre: senior-linux-x86_64
+            binario: senior
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            nombre: senior-windows-x86_64.exe
+            binario: senior.exe
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            nombre: senior-macos-arm64
+            binario: senior
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Compilar en modo release
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Renombrar el binario
+        shell: bash
+        run: |
+          cp "target/${{ matrix.target }}/release/${{ matrix.binario }}" "${{ matrix.nombre }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.nombre }}
+          path: ${{ matrix.nombre }}
+
+  publicar:
+    name: Publicar release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: binarios
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: binarios/*
+          generate_release_notes: true

@@ -1,0 +1,73 @@
+[package]
+name = "seniorcli"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "AI Learning Harness para aprender a programar desde la terminal"
+authors = ["Equipo SeniorCLI"]
+license = "MIT"
+readme = "README.md"
+repository = ""
+keywords = ["cli", "learning", "tutor", "llm"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "senior"
+path = "src/main.rs"
+
+[lib]
+name = "seniorcli"
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+async-trait = "0.1.92"
+chrono = { version = "0.4.45", features = ["serde"] }
+clap = { version = "4.6.7", features = ["derive"] }
+dirs = "7.0.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.20"
+tokio = { version = "1.53.1", features = [
+    "rt-multi-thread",
+    "macros",
+    "process",
+    "time",
+    "fs",
+    "signal",
+] }
+toml = "1.1.6"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+
+# --- Dependencias por frente -------------------------------------------------
+# Estan comentadas a proposito: cada frente las activa cuando empieza a usarlas,
+# para no pagar tiempo de compilacion por codigo que todavia no existe.
+#
+# Frente 1 (Runtime & Context):
+#   ignore  = "0.4"    # recorrer el repo respetando .gitignore
+#   walkdir = "2"      # exploracion de archivos
+#   regex   = "1"      # parseo de diagnosticos
+#
+# Frente 2 (AI & Learning Harness):
+#   reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+#   secrecy = "0.10"   # evitar exponer la API key en logs/Debug
+#
+# Frente 3 (CLI, Producto & Persistencia):
+#   rustyline = "14"   # REPL con historial y edicion
+#   crossterm = "0.28" # eventos y formato de terminal
+#   rusqlite  = "0.32" # solo si el historial deja de caber en JSON
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1

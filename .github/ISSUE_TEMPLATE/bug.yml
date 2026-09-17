@@ -1,0 +1,44 @@
+name: Bug
+description: Algo no funciona como deberia.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: que_paso
+    attributes:
+      label: Que paso
+    validations:
+      required: true
+
+  - type: textarea
+    id: que_esperabas
+    attributes:
+      label: Que esperabas que pasara
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducir
+    attributes:
+      label: Como reproducirlo
+      placeholder: |
+        1. cd a un proyecto Java
+        2. senior debug
+        3. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Sistema operativo
+      options: [Windows, Linux, macOS]
+    validations:
+      required: true
+
+  - type: textarea
+    id: salida
+    attributes:
+      label: Salida completa
+      description: Corre el comando con `--verbose` y pega la salida.
+      render: shell

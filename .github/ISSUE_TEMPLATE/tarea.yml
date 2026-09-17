@@ -1,0 +1,50 @@
+name: Tarea de un frente
+description: Trabajo planeado dentro de un frente.
+title: "[Frente N] "
+labels: ["tarea"]
+body:
+  - type: dropdown
+    id: frente
+    attributes:
+      label: Frente
+      options:
+        - Frente 1 - Runtime & Context
+        - Frente 2 - AI & Learning Harness
+        - Frente 3 - CLI, Producto & Persistencia
+        - Contratos compartidos
+        - Infraestructura / CI
+    validations:
+      required: true
+
+  - type: textarea
+    id: objetivo
+    attributes:
+      label: Que hay que construir
+      description: En una o dos frases, sin implementacion.
+    validations:
+      required: true
+
+  - type: textarea
+    id: hecho
+    attributes:
+      label: Definicion de "hecho"
+      description: Como sabemos que quedo. Incluye el test minimo que debe pasar.
+      placeholder: |
+        - Un fixture de Java produce el ProjectContext esperado
+        - `cargo test` pasa en los tres sistemas operativos
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contratos
+    attributes:
+      label: Contratos
+      options:
+        - label: Esta tarea NO requiere cambiar `src/contracts/`
+        - label: Requiere cambiar `src/contracts/` (hay que avisar a los otros frentes)
+
+  - type: textarea
+    id: dependencias
+    attributes:
+      label: Depende de
+      description: Otras tareas o frentes que deben avanzar primero. Si nada, escribe "nada".
