@@ -2,7 +2,9 @@
 name = "seniorcli"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+# 1.88 es cuando se estabilizaron las let-chains (`if let ... && ...`),
+# que usamos en runtime/, learning/ y app/. Las dependencias piden 1.85.
+rust-version = "1.88"
 description = "AI Learning Harness para aprender a programar desde la terminal"
 authors = ["Equipo SeniorCLI"]
 license = "MIT"

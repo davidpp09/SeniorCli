@@ -205,7 +205,12 @@ mod tests {
             .expect("recolecta contexto");
 
         assert_eq!(contexto.stack.active, Language::Rust);
-        assert!(contexto.stack.root.ends_with("seniorcli"));
+        // Comparar contra la raiz real, no contra el nombre de la carpeta: en
+        // CI el checkout se llama como el repositorio, no como el crate.
+        assert_eq!(
+            contexto.stack.root.canonicalize().ok(),
+            root.canonicalize().ok(),
+        );
     }
 
     #[tokio::test]

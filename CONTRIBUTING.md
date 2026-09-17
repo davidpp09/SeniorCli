@@ -6,7 +6,7 @@ existen para que eso no termine en conflictos de merge y contratos rotos.
 ## 1. Antes de escribir codigo
 
 ```bash
-rustup update stable          # necesitamos Rust 1.85 o mas (edition 2024)
+rustup update stable          # necesitamos Rust 1.88 o mas (edition 2024)
 cargo test                    # debe pasar todo antes de que empieces
 cp .env.example .env          # opcional: solo si vas a usar un proveedor real
 ```
