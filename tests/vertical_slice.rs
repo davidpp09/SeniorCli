@@ -63,7 +63,9 @@ async fn flujo_completo_frente_1_a_frente_3() {
 
     // --- Frente 3: presentacion y persistencia ------------------------------
     let render = seniorcli::app::ui::render_decision(&decision);
-    assert!(render.contains("[pista]"));
+    // El alumno siempre ve que tipo de ayuda recibio y sobre que concepto. Como
+    // se maqueta eso es del Frente 3; que aparezca, no.
+    assert!(render.contains(decision.intervention.as_str()));
     assert!(render.contains(&decision.concept));
 
     let mut session = SessionState::start(storage.new_session_path().expect("ruta de sesion"));

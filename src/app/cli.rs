@@ -3,6 +3,10 @@
 //! Los cuatro comandos del alcance inicial: `init`, `learn`, `debug`,
 //! `progress`. Agregar comandos nuevos es barato; agregarlos antes de que el
 //! flujo central funcione, no.
+//!
+//! `senior` a secas, sin subcomando, abre la sesion interactiva. Esa es la
+//! forma normal de usar la herramienta; los subcomandos quedan para scripts y
+//! para entrar directo a un modo concreto.
 
 use std::path::PathBuf;
 
@@ -26,8 +30,9 @@ pub struct Cli {
     #[arg(long, short, global = true)]
     pub verbose: bool,
 
+    /// Subcomando. Si no se indica ninguno, se abre la sesion interactiva.
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -102,6 +107,12 @@ mod tests {
     }
 
     #[test]
+    fn sin_subcomando_se_abre_la_sesion_interactiva() {
+        let cli = Cli::try_parse_from(["senior"]).expect("parsea");
+        assert!(cli.command.is_none());
+    }
+
+    #[test]
     fn parsea_los_cuatro_comandos() {
         for args in [
             vec!["senior", "init"],
@@ -116,19 +127,19 @@ mod tests {
     #[test]
     fn learn_es_la_modalidad_mas_estricta() {
         let cli = Cli::try_parse_from(["senior", "learn", "hola"]).expect("parsea");
-        assert_eq!(cli.command.policy().ceiling, Intervention::Hint);
+        let comando = cli.command.expect("hay subcomando");
+        assert_eq!(comando.policy().ceiling, Intervention::Hint);
     }
 
     #[test]
     fn solo_debug_explain_llega_a_la_solucion() {
         let normal = Cli::try_parse_from(["senior", "debug"]).expect("parsea");
-        assert!(normal.command.policy().ceiling < Intervention::GuidedSolution);
+        let normal = normal.command.expect("hay subcomando");
+        assert!(normal.policy().ceiling < Intervention::GuidedSolution);
 
         let explicito = Cli::try_parse_from(["senior", "debug", "--explain"]).expect("parsea");
-        assert_eq!(
-            explicito.command.policy().ceiling,
-            Intervention::GuidedSolution
-        );
+        let explicito = explicito.command.expect("hay subcomando");
+        assert_eq!(explicito.policy().ceiling, Intervention::GuidedSolution);
     }
 
     #[test]

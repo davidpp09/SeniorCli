@@ -22,7 +22,8 @@ pub mod ui;
 use std::path::PathBuf;
 
 use crate::contracts::{
-    ContextEngine, ContextFocus, ProfileStore, Result, StudentProfile, TutorRequest,
+    ContextEngine, ContextFocus, ProfileStore, ProjectContext, Result, StudentProfile,
+    TutorDecision, TutorEngine, TutorRequest,
 };
 use crate::learning::{Evidence, TeachingPolicy, build_engine, record_evidence};
 use crate::runtime::ContextCollector;
@@ -79,11 +80,18 @@ pub async fn run(cli: Cli) -> Result<()> {
         None => std::env::current_dir()?,
     };
 
-    match &cli.command {
+    // `senior` a secas abre la sesion interactiva: es la forma normal de usar
+    // la herramienta. Los subcomandos quedan para scripts y para entrar directo
+    // a un modo concreto.
+    let Some(command) = &cli.command else {
+        return cmd_sesion(&root, TeachingPolicy::default()).await;
+    };
+
+    match command {
         Commands::Init { provider, force } => cmd_init(&root, provider, *force),
         Commands::Progress { sessions } => cmd_progress(&root, *sessions),
         Commands::Learn { message, goal } => {
-            let politica = cli.command.policy();
+            let politica = command.policy();
             cmd_turno(
                 &root,
                 message.clone(),
@@ -94,7 +102,7 @@ pub async fn run(cli: Cli) -> Result<()> {
             .await
         }
         Commands::Debug { message, file, .. } => {
-            let politica = cli.command.policy();
+            let politica = command.policy();
             let focus = match file {
                 Some(f) => ContextFocus::File(f.clone()),
                 None => ContextFocus::LastError,
@@ -161,6 +169,134 @@ fn cmd_progress(root: &std::path::Path, con_sesiones: bool) -> Result<()> {
         && let Ok(sesion) = SessionState::resume(&ruta)
     {
         println!("Ultima sesion: {}", sesion.summary());
+    }
+
+    Ok(())
+}
+
+/// Sesion interactiva: lo que pasa al escribir `senior` a secas.
+///
+/// Dos diferencias con `cmd_turno`, y son justo las que cambian la sensacion de
+/// la herramienta:
+///
+/// 1. el proyecto se analiza **una vez** al entrar, no en cada pregunta;
+/// 2. la respuesta del alumno a la pregunta del tutor es simplemente su
+///    siguiente mensaje, como en una conversacion.
+async fn cmd_sesion(root: &std::path::Path, politica: TeachingPolicy) -> Result<()> {
+    let mut state = AppState::load(root.to_path_buf())?;
+
+    println!(
+        "{}",
+        ui::bienvenida(
+            &state.config.project_id,
+            &state.project_root,
+            &state.config.provider,
+            politica.ceiling,
+        )
+    );
+
+    let collector = ContextCollector::new();
+    println!("Analizando el proyecto...");
+    let mut context = collector
+        .collect(&state.project_root, ContextFocus::LastError)
+        .await?;
+    println!();
+    println!("{}", ui::render_evidencia(&context));
+
+    let engine = build_engine(&state.config.provider, politica)?;
+    let mut prompt = repl::StdinPrompt;
+
+    bucle(
+        &mut state,
+        &mut context,
+        engine.as_ref(),
+        &collector,
+        &mut prompt,
+    )
+    .await?;
+
+    println!();
+    println!(
+        "{}",
+        ui::despedida(state.session.len(), state.session.path())
+    );
+
+    Ok(())
+}
+
+/// El bucle de la sesion.
+///
+/// Esta separado de [`cmd_sesion`] a proposito: recibe el `Prompt` por
+/// parametro, asi que los tests pueden guionizar una conversacion entera sin
+/// teclado, con [`repl::ScriptedPrompt`].
+async fn bucle<P: repl::Prompt>(
+    state: &mut AppState,
+    context: &mut ProjectContext,
+    engine: &dyn TutorEngine,
+    collector: &ContextCollector,
+    prompt: &mut P,
+) -> Result<()> {
+    // La pregunta que quedo abierta en el turno anterior. Cuando el alumno
+    // vuelve a escribir, esa linea es su respuesta: no hay que pedirsela aparte.
+    let mut pendiente: Option<TutorDecision> = None;
+
+    // El bucle termina cuando el alumno escribe `/salir` o cierra la entrada
+    // con Ctrl+D / Ctrl+Z.
+    while let Some(linea) = prompt.ask(">")? {
+        match repl::interpretar(&linea) {
+            repl::Entrada::Vacia => continue,
+            repl::Entrada::Salir => break,
+            repl::Entrada::Ayuda => println!("{}", ui::ayuda()),
+            repl::Entrada::Progreso => println!("{}", ui::render_progress(&state.profile)),
+            repl::Entrada::Contexto => println!("{}", ui::render_evidencia(context)),
+            repl::Entrada::Analizar => {
+                println!("Volviendo a mirar el proyecto...");
+                *context = collector
+                    .collect(&state.project_root, ContextFocus::LastError)
+                    .await?;
+                println!();
+                println!("{}", ui::render_evidencia(context));
+            }
+            repl::Entrada::Desconocida(comando) => {
+                println!("No conozco `/{comando}`. Escribe /ayuda para ver la lista.");
+            }
+            repl::Entrada::Mensaje(mensaje) => {
+                // Si habia una pregunta abierta, este mensaje la contesta: eso
+                // dice cuanto le costo el concepto y se registra como evidencia.
+                if let Some(previa) = pendiente.take() {
+                    record_evidence(
+                        &mut state.profile,
+                        &previa.concept,
+                        Evidence::from_intervention(previa.intervention),
+                    );
+                }
+
+                println!();
+                println!("Pensando...");
+
+                let inicio = std::time::Instant::now();
+                let decision = engine
+                    .decide(TutorRequest::new(
+                        &mensaje,
+                        context.clone(),
+                        state.profile.clone(),
+                    ))
+                    .await?;
+                let latencia = inicio.elapsed().as_millis();
+
+                println!();
+                println!("{}", ui::render_decision(&decision));
+
+                state.profile.push_recent_error(&mensaje);
+                state.persistir_turno(
+                    Turn::new(&mensaje, decision.clone()).with_latency(latencia),
+                )?;
+
+                if decision.question.is_some() {
+                    pendiente = Some(decision);
+                }
+            }
+        }
     }
 
     Ok(())
@@ -268,6 +404,47 @@ mod tests {
         cmd_init(dir.path(), "mock", false).expect("init 1");
         cmd_init(dir.path(), "mock", false).expect("init 2");
         assert!(Storage::new(dir.path()).is_initialized());
+    }
+
+    #[tokio::test]
+    async fn la_sesion_encadena_turnos_sin_volver_a_analizar() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        cmd_init(dir.path(), "mock", false).expect("init");
+        let mut state = AppState::load(dir.path().to_path_buf()).expect("carga");
+
+        let mut context = MockContextEngine::java_null_pointer()
+            .collect(dir.path(), ContextFocus::LastError)
+            .await
+            .expect("contexto");
+
+        let engine = build_engine("mock", TeachingPolicy::default()).expect("motor");
+        let collector = ContextCollector::new().without_diagnostics();
+        let mut prompt = repl::ScriptedPrompt::new([
+            "por que falla findById?",
+            "/ayuda",
+            "creo que devuelve null cuando el id no existe",
+            "/salir",
+        ]);
+
+        bucle(
+            &mut state,
+            &mut context,
+            engine.as_ref(),
+            &collector,
+            &mut prompt,
+        )
+        .await
+        .expect("la sesion corre entera");
+
+        // Dos mensajes = dos turnos: los comandos no ensucian la sesion.
+        assert_eq!(state.session.len(), 2);
+
+        // La segunda linea contesto la pregunta del primer turno, y eso dejo
+        // huella en el perfil sin que el alumno hiciera nada especial.
+        assert!(state.profile.topic("null-safety").is_some());
+
+        let sesion = SessionState::resume(state.session.path()).expect("retoma");
+        assert_eq!(sesion.len(), 2);
     }
 
     #[tokio::test]
